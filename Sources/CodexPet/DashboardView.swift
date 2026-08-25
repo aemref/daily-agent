@@ -80,6 +80,18 @@ struct DashboardView: View {
                 }
             }
 
+            if store.tasks.isEmpty {
+                Label(
+                    "Bugün seçtiğin çalışma günlerinden biri değil.",
+                    systemImage: "cup.and.saucer.fill"
+                )
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 11))
+            }
+
             Spacer(minLength: 0)
 
             if store.isDayComplete {
@@ -168,8 +180,10 @@ private struct TaskRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 5) {
                     Text(task.category.rawValue)
-                    Text("•")
-                    Text("\(task.estimatedMinutes) dk")
+                    if task.estimatedMinutes > 0 {
+                        Text("•")
+                        Text("\(task.estimatedMinutes) dk")
+                    }
                 }
                 .font(.caption2)
                 .foregroundStyle(.secondary)

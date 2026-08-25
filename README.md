@@ -1,6 +1,6 @@
 # Daily Agent
 
-A native macOS menu bar assistant that turns a PDF or pasted roadmap into a capacity-aware daily plan with OpenAI. The in-app companion is called **Codex Pet**.
+A native macOS menu bar assistant that turns a PDF or pasted roadmap into a one-year daily plan with OpenAI. The in-app companion is called **Codex Pet**.
 
 ## Start here: add your own OpenAI API key
 
@@ -40,11 +40,12 @@ The app does not appear in the Dock. Look for the sparkle icon in the macOS menu
 - Compact pet and expanded daily dashboard
 - PDF import with native PDFKit text extraction
 - Paste-in roadmap or goal text
-- User-defined duration, work days per week, and daily capacity
+- Clickable Monday-Sunday workday selection
+- Fixed one-year plan scheduled only on selected weekdays
 - OpenAI Responses API integration using strict JSON Schema output
 - Prompt-injection boundary that treats imported documents as untrusted data
 - AI roadmap preview before activation
-- Capacity-aware weekly-to-daily scheduling
+- Selected-weekday weekly-to-daily scheduling
 - Local JSON persistence for task completion and streak data
 - No API keys or imported PDFs stored in the repository
 
@@ -92,7 +93,7 @@ OpenAI Responses API + strict JSON Schema
         ↓
 Validated weekly roadmap preview
         ↓
-Local capacity-aware daily scheduler
+Local selected-weekday daily scheduler
         ↓
 Menu bar tasks and floating pet
 ```

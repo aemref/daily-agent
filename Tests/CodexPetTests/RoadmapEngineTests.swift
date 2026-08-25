@@ -46,8 +46,9 @@ final class RoadmapEngineTests: XCTestCase {
             title: "Test Roadmap",
             summary: "Test",
             durationWeeks: 1,
-            daysPerWeek: 5,
-            minutesPerDay: 60,
+            daysPerWeek: 2,
+            minutesPerDay: nil,
+            selectedWeekdays: [2, 4],
             weeks: [
                 GeneratedWeek(
                     weekNumber: 1,
@@ -59,7 +60,7 @@ final class RoadmapEngineTests: XCTestCase {
                             title: "Task \($0)",
                             detail: "Detail",
                             category: "build",
-                            estimatedMinutes: 30,
+                            estimatedMinutes: nil,
                             acceptanceCriteria: ["Done"]
                         )
                     }
@@ -67,7 +68,7 @@ final class RoadmapEngineTests: XCTestCase {
             ]
         )
         let calendar = Calendar(identifier: .gregorian)
-        let start = RoadmapEngine.startDate
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 24)))
         let secondDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: start))
         let plan = CustomRoadmapScheduler(calendar: calendar).plan(
             for: secondDay,
@@ -76,7 +77,15 @@ final class RoadmapEngineTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.dayNumber, 2)
-        XCTAssertEqual(plan.totalDays, 7)
-        XCTAssertEqual(plan.tasks.map(\.title), ["Task 2", "Task 7"])
+        XCTAssertEqual(plan.totalDays, 365)
+        XCTAssertEqual(plan.tasks.map(\.title), ["Task 1", "Task 3", "Task 5", "Task 7", "Task 9"])
+
+        let restDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 2, to: start))
+        let restPlan = CustomRoadmapScheduler(calendar: calendar).plan(
+            for: restDay,
+            roadmap: roadmap,
+            startDate: start
+        )
+        XCTAssertTrue(restPlan.tasks.isEmpty)
     }
 }

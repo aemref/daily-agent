@@ -60,11 +60,20 @@ final class TaskStore: ObservableObject {
     var currentStreak: Int {
         let calendar = Calendar.autoupdatingCurrent
         let today = calendar.startOfDay(for: now())
-        var cursor = isDayComplete ? today : (calendar.date(byAdding: .day, value: -1, to: today) ?? today)
+        var cursor = today
+        if isScheduledWorkday(today), !isDayComplete {
+            cursor = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        }
         var count = 0
 
-        while completedDateKeys.contains(Self.dateKey(for: cursor)) {
-            count += 1
+        for _ in 0..<366 {
+            if isScheduledWorkday(cursor) {
+                if completedDateKeys.contains(Self.dateKey(for: cursor)) {
+                    count += 1
+                } else {
+                    break
+                }
+            }
             guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
             cursor = previous
         }
@@ -141,6 +150,15 @@ final class TaskStore: ObservableObject {
         } else {
             completedDateKeys.remove(key)
         }
+    }
+
+    private func isScheduledWorkday(_ date: Date) -> Bool {
+        guard let roadmap = activeRoadmap else { return true }
+        let selected = roadmap.selectedWeekdays
+            ?? Array(1...max(1, min(7, roadmap.daysPerWeek ?? 5)))
+        let appleWeekday = Calendar.autoupdatingCurrent.component(.weekday, from: date)
+        let isoWeekday = ((appleWeekday + 5) % 7) + 1
+        return selected.contains(isoWeekday)
     }
 
     private func save() {

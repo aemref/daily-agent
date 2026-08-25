@@ -59,8 +59,9 @@ struct GeneratedRoadmap: Codable, Equatable, Sendable {
     var title: String
     var summary: String
     var durationWeeks: Int
-    var daysPerWeek: Int
-    var minutesPerDay: Int
+    var daysPerWeek: Int?
+    var minutesPerDay: Int?
+    var selectedWeekdays: [Int]?
     var weeks: [GeneratedWeek]
 
     var taskCount: Int {
@@ -80,18 +81,16 @@ struct GeneratedTask: Codable, Equatable, Sendable {
     var title: String
     var detail: String
     var category: String
-    var estimatedMinutes: Int
+    var estimatedMinutes: Int?
     var acceptanceCriteria: [String]
 }
 
 struct SchedulePreferences: Equatable, Sendable {
-    var durationMonths: Int = 6
-    var daysPerWeek: Int = 5
-    var minutesPerDay: Int = 60
+    var selectedWeekdays: Set<Int> = [1, 2, 3, 4, 5]
 
-    var durationWeeks: Int {
-        max(4, Int((Double(durationMonths) * 4.345).rounded()))
-    }
+    let durationWeeks = 52
+
+    var daysPerWeek: Int { selectedWeekdays.count }
 }
 
 struct PersistedState: Codable, Sendable {

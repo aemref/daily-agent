@@ -101,7 +101,7 @@ struct RoadmapSetupView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Daily Agent")
                     .font(.headline)
-                Text("Dokümanını hedef sürene göre günlük görevlere dönüştür.")
+                Text("Dokümanını bir yıllık çalışma planına dönüştür.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -146,7 +146,7 @@ struct RoadmapSetupView: View {
 
                     TextEditor(text: $model.sourceText)
                         .font(.system(.caption, design: .rounded))
-                        .frame(minHeight: 145)
+                        .frame(minHeight: 175)
                         .padding(6)
                         .scrollContentBackground(.hidden)
                         .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
@@ -159,26 +159,32 @@ struct RoadmapSetupView: View {
                                     .allowsHitTesting(false)
                             }
                         }
+                        .overlay(alignment: .bottomTrailing) {
+                            sendButton.padding(10)
+                        }
 
-                    Text("PDF önce cihazda metne dönüştürülür. Planlama sırasında çıkarılan metin OpenAI API'ye gönderilir.")
+                    Text("PDF cihazda metne dönüştürülür; sağ alttaki gönder butonu planı oluşturur.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("2. Çalışma kapasiteni belirle")
+                    Text("2. Çalışacağın günleri seç")
                         .font(.subheadline.bold())
 
-                    Stepper("Hedef süre: \(model.preferences.durationMonths) ay", value: $model.preferences.durationMonths, in: 1...12)
-                    Stepper("Haftada \(model.preferences.daysPerWeek) gün", value: $model.preferences.daysPerWeek, in: 3...7)
-                    Stepper("Günde \(model.preferences.minutesPerDay) dakika", value: $model.preferences.minutesPerDay, in: 30...240, step: 15)
+                    HStack(spacing: 6) {
+                        ForEach(Self.weekdays, id: \.number) { weekday in
+                            weekdayButton(weekday)
+                        }
+                    }
 
-                    let totalHours = model.preferences.durationWeeks
-                        * model.preferences.daysPerWeek
-                        * model.preferences.minutesPerDay / 60
-                    Text("≈ \(model.preferences.durationWeeks) hafta • \(totalHours) saat toplam kapasite")
+                    Text("1 yıl • 52 hafta • haftada \(model.preferences.daysPerWeek) çalışma günü")
                         .font(.caption.bold())
                         .foregroundStyle(.indigo)
+
+                    Text("Görevler yalnızca seçtiğin günlere eşit şekilde dağıtılır.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(12)
                 .background(.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
@@ -193,22 +199,12 @@ struct RoadmapSetupView: View {
                         .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
 
-                Button {
-                    Task { await model.generate() }
-                } label: {
-                    HStack {
-                        if model.isGenerating {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Image(systemName: "sparkles")
-                        }
-                        Text(model.isGenerating ? "Roadmap oluşturuluyor..." : "AI roadmap oluştur")
-                    }
-                    .frame(maxWidth: .infinity)
+                if model.isGenerating {
+                    Label("Bir yıllık roadmap oluşturuluyor...", systemImage: "sparkles")
+                        .font(.caption.bold())
+                        .foregroundStyle(.indigo)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(model.isGenerating || model.sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(16)
         }
@@ -249,7 +245,7 @@ struct RoadmapSetupView: View {
                 metric("\(roadmap.durationWeeks)", "hafta")
                 metric("\(roadmap.weeks.count)", "plan bölümü")
                 metric("\(roadmap.taskCount)", "görev")
-                metric("\(roadmap.daysPerWeek)", "gün / hafta")
+                metric("\(roadmap.selectedWeekdays?.count ?? roadmap.daysPerWeek ?? 0)", "gün / hafta")
             }
 
             Text("Plan önizlemesi")
@@ -308,4 +304,52 @@ struct RoadmapSetupView: View {
         .padding(.vertical, 8)
         .background(.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
     }
+
+    private var sendButton: some View {
+        Button {
+            Task { await model.generate() }
+        } label: {
+            Group {
+                if model.isGenerating {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "paperplane.fill")
+                }
+            }
+            .frame(width: 34, height: 34)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.circle)
+        .disabled(
+            model.isGenerating
+                || model.sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || model.preferences.selectedWeekdays.isEmpty
+        )
+        .help("Bir yıllık planı oluştur")
+    }
+
+    private func weekdayButton(_ weekday: (number: Int, shortName: String)) -> some View {
+        let isSelected = model.preferences.selectedWeekdays.contains(weekday.number)
+        return Button(weekday.shortName) {
+            if isSelected {
+                guard model.preferences.selectedWeekdays.count > 1 else { return }
+                model.preferences.selectedWeekdays.remove(weekday.number)
+            } else {
+                model.preferences.selectedWeekdays.insert(weekday.number)
+            }
+        }
+        .buttonStyle(.plain)
+        .font(.caption.bold())
+        .foregroundStyle(isSelected ? .white : .secondary)
+        .frame(maxWidth: .infinity, minHeight: 34)
+        .background(
+            isSelected ? Color.indigo : Color.primary.opacity(0.06),
+            in: RoundedRectangle(cornerRadius: 9)
+        )
+    }
+
+    private static let weekdays: [(number: Int, shortName: String)] = [
+        (1, "Pzt"), (2, "Sal"), (3, "Çar"), (4, "Per"),
+        (5, "Cum"), (6, "Cmt"), (7, "Paz")
+    ]
 }

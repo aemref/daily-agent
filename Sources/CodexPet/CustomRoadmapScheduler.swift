@@ -11,27 +11,29 @@ struct CustomRoadmapScheduler: Sendable {
         let start = calendar.startOfDay(for: startDate)
         let current = calendar.startOfDay(for: date)
         let offset = max(0, calendar.dateComponents([.day], from: start, to: current).day ?? 0)
-        let totalDays = max(1, roadmap.durationWeeks * 7)
+        let totalDays = 365
         let boundedOffset = min(totalDays - 1, offset)
         let weekIndex = min(max(0, boundedOffset / 7), max(0, roadmap.weeks.count - 1))
-        let dayInWeek = boundedOffset % 7
         let week = roadmap.weeks[weekIndex]
+        let selectedWeekdays = normalizedWeekdays(for: roadmap)
+        let currentWeekday = isoWeekday(for: current)
 
         let scheduledTasks: [GeneratedTask]
-        if dayInWeek < roadmap.daysPerWeek {
+        if let selectedDayIndex = selectedWeekdays.firstIndex(of: currentWeekday) {
             scheduledTasks = week.tasks.enumerated()
-                .filter { $0.offset % roadmap.daysPerWeek == dayInWeek }
+                .filter { $0.offset % selectedWeekdays.count == selectedDayIndex }
                 .map(\.element)
         } else {
             scheduledTasks = []
         }
 
-        let tasks = scheduledTasks.isEmpty
+        let isWorkday = selectedWeekdays.contains(currentWeekday)
+        let tasks = scheduledTasks.isEmpty && isWorkday
             ? [DailyTask(
-                title: dayInWeek < roadmap.daysPerWeek ? "Haftalık planı gözden geçir" : "Dinlenme ve kısa değerlendirme günü",
+                title: "Haftalık planı gözden geçir",
                 detail: week.outcome,
                 category: .review,
-                estimatedMinutes: dayInWeek < roadmap.daysPerWeek ? min(30, roadmap.minutesPerDay) : 10
+                estimatedMinutes: 0
             )]
             : scheduledTasks.map { task in
                 DailyTask(
@@ -40,7 +42,7 @@ struct CustomRoadmapScheduler: Sendable {
                         ? task.detail
                         : task.acceptanceCriteria.joined(separator: " • "),
                     category: category(from: task.category),
-                    estimatedMinutes: min(task.estimatedMinutes, roadmap.minutesPerDay)
+                    estimatedMinutes: 0
                 )
             }
 
@@ -53,6 +55,18 @@ struct CustomRoadmapScheduler: Sendable {
             repository: roadmap.title,
             tasks: tasks
         )
+    }
+
+    private func normalizedWeekdays(for roadmap: GeneratedRoadmap) -> [Int] {
+        let explicit = roadmap.selectedWeekdays ?? []
+        let valid = Array(Set(explicit.filter { (1...7).contains($0) })).sorted()
+        if !valid.isEmpty { return valid }
+        return Array(1...max(1, min(7, roadmap.daysPerWeek ?? 5)))
+    }
+
+    private func isoWeekday(for date: Date) -> Int {
+        let appleWeekday = calendar.component(.weekday, from: date)
+        return ((appleWeekday + 5) % 7) + 1
     }
 
     private func category(from value: String) -> TaskCategory {
