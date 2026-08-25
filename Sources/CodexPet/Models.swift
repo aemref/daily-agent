@@ -27,6 +27,9 @@ struct DailyTask: Identifiable, Codable, Equatable, Sendable {
     var category: TaskCategory
     var estimatedMinutes: Int
     var isCompleted: Bool
+    var scheduledDateKey: String?
+    var checklist: [String]?
+    var completionCriteria: String?
 
     init(
         id: UUID = UUID(),
@@ -34,7 +37,10 @@ struct DailyTask: Identifiable, Codable, Equatable, Sendable {
         detail: String,
         category: TaskCategory,
         estimatedMinutes: Int,
-        isCompleted: Bool = false
+        isCompleted: Bool = false,
+        scheduledDateKey: String? = nil,
+        checklist: [String]? = nil,
+        completionCriteria: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -42,6 +48,9 @@ struct DailyTask: Identifiable, Codable, Equatable, Sendable {
         self.category = category
         self.estimatedMinutes = estimatedMinutes
         self.isCompleted = isCompleted
+        self.scheduledDateKey = scheduledDateKey
+        self.checklist = checklist
+        self.completionCriteria = completionCriteria
     }
 }
 
@@ -99,12 +108,14 @@ struct PersistedState: Codable, Sendable {
     var completedDateKeys: [String]
     var activeRoadmap: GeneratedRoadmap?
     var roadmapStartDate: Date?
+    var overdueTasks: [DailyTask]?
 
     static let empty = PersistedState(
         dateKey: "",
         tasks: [],
         completedDateKeys: [],
         activeRoadmap: nil,
-        roadmapStartDate: nil
+        roadmapStartDate: nil,
+        overdueTasks: []
     )
 }

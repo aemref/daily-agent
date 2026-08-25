@@ -73,21 +73,71 @@ struct CompactPetView: View {
     let onExpand: () -> Void
 
     var body: some View {
-        Button(action: onExpand) {
-            VStack(spacing: 6) {
-                PetAvatar(progress: store.progress, size: 54)
-                Text("\(store.completedCount)/\(store.tasks.count)")
-                    .font(.caption.bold())
-                    .foregroundStyle(.primary)
+        PetAvatar(progress: store.progress, size: 64)
+            .padding(6)
+            .contentShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(ProfileDragSurface(onTap: onExpand))
+            .help("Taşımak için sürükle, görevleri açmak için tıkla")
+            .accessibilityAction(named: "Görevleri aç") {
+                onExpand()
             }
-            .padding(10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(.white.opacity(0.35), lineWidth: 1)
-            }
+    }
+}
+
+private struct ProfileDragSurface: NSViewRepresentable {
+    let onTap: () -> Void
+
+    func makeNSView(context: Context) -> ProfileDragView {
+        let view = ProfileDragView()
+        view.onTap = onTap
+        return view
+    }
+
+    func updateNSView(_ nsView: ProfileDragView, context: Context) {
+        nsView.onTap = onTap
+    }
+}
+
+private final class ProfileDragView: NSView {
+    var onTap: (() -> Void)?
+    private var mouseDownLocation: NSPoint?
+    private var windowOrigin: NSPoint?
+    private var moved = false
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        mouseDownLocation = NSEvent.mouseLocation
+        windowOrigin = window?.frame.origin
+        moved = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard
+            let window,
+            let mouseDownLocation,
+            let windowOrigin
+        else { return }
+
+        let current = NSEvent.mouseLocation
+        let deltaX = current.x - mouseDownLocation.x
+        let deltaY = current.y - mouseDownLocation.y
+        moved = moved || hypot(deltaX, deltaY) >= 3
+
+        var target = NSPoint(x: windowOrigin.x + deltaX, y: windowOrigin.y + deltaY)
+        if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
+            target.x = min(max(target.x, visible.minX), visible.maxX - window.frame.width)
+            target.y = min(max(target.y, visible.minY), visible.maxY - window.frame.height)
         }
-        .buttonStyle(.plain)
-        .help("Bugünün görevlerini aç")
+        window.setFrameOrigin(target)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if !moved {
+            onTap?()
+        }
+        mouseDownLocation = nil
+        windowOrigin = nil
+        moved = false
     }
 }

@@ -33,16 +33,24 @@ struct CustomRoadmapScheduler: Sendable {
                 title: "Haftalık planı gözden geçir",
                 detail: week.outcome,
                 category: .review,
-                estimatedMinutes: 0
+                estimatedMinutes: 0,
+                checklist: [
+                    "Haftanın hedefini ve mevcut ilerlemeyi karşılaştır.",
+                    "Eksik veya engellenen işleri nedenleriyle birlikte kaydet.",
+                    "Sonraki çalışma günü için küçük ve doğrulanabilir bir adım belirle."
+                ],
+                completionCriteria: week.outcome
             )]
             : scheduledTasks.map { task in
                 DailyTask(
                     title: task.title,
-                    detail: task.acceptanceCriteria.isEmpty
-                        ? task.detail
-                        : task.acceptanceCriteria.joined(separator: " • "),
+                    detail: task.detail,
                     category: category(from: task.category),
-                    estimatedMinutes: 0
+                    estimatedMinutes: 0,
+                    checklist: task.acceptanceCriteria.isEmpty ? nil : task.acceptanceCriteria,
+                    completionCriteria: task.acceptanceCriteria.isEmpty
+                        ? nil
+                        : task.acceptanceCriteria.joined(separator: " • ")
                 )
             }
 

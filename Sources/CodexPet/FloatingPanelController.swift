@@ -15,7 +15,7 @@ final class FloatingPanelController: ObservableObject {
             createPanel()
         }
         positionAtRightEdge()
-        panel?.orderFrontRegardless()
+        panel?.orderFront(nil)
     }
 
     func close() {
@@ -29,9 +29,9 @@ final class FloatingPanelController: ObservableObject {
             backing: .buffered,
             defer: false
         )
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.isFloatingPanel = false
+        panel.level = .normal
+        panel.collectionBehavior = [.canJoinAllSpaces]
         panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
         panel.hasShadow = true
@@ -48,20 +48,24 @@ final class FloatingPanelController: ObservableObject {
         let view = DashboardView(
             store: store,
             isFloating: true,
+            onProfileTap: { [weak self] in self?.collapse() },
             onCollapse: { [weak self] in self?.collapse() },
             onClose: { [weak self] in self?.close() }
         )
+        panel.isMovableByWindowBackground = true
         panel.contentView = NSHostingView(rootView: view.clipShape(RoundedRectangle(cornerRadius: 18)))
         resize(width: 320, height: 480)
     }
 
     private func collapse() {
         guard let panel else { return }
-        let view = CompactPetView(store: store) { [weak self] in
-            self?.showExpandedContent()
-        }
+        let view = CompactPetView(
+            store: store,
+            onExpand: { [weak self] in self?.showExpandedContent() }
+        )
+        panel.isMovableByWindowBackground = false
         panel.contentView = NSHostingView(rootView: view)
-        resize(width: 86, height: 96)
+        resize(width: 76, height: 76)
     }
 
     private func resize(width: CGFloat, height: CGFloat) {

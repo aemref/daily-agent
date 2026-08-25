@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -18,7 +19,9 @@ struct CodexPetApp: App {
                 DashboardView(
                     store: store,
                     onShowFloating: {
+                        let menuBarWindow = NSApp.keyWindow
                         panelController.show()
+                        menuBarWindow?.orderOut(nil)
                     }
                 )
             } else {

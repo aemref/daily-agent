@@ -38,6 +38,7 @@ The app does not appear in the Dock. Look for the sparkle icon in the macOS menu
 - Optional floating edge panel powered by `NSPanel`
 - Animated pet with idle movement, blinking, and progress reactions
 - Compact pet and expanded daily dashboard
+- Draggable compact pet that stays behind other applications
 - PDF import with native PDFKit text extraction
 - Paste-in roadmap or goal text
 - Clickable Monday-Sunday workday selection
@@ -46,7 +47,11 @@ The app does not appear in the Dock. Look for the sparkle icon in the macOS menu
 - Prompt-injection boundary that treats imported documents as untrusted data
 - AI roadmap preview before activation
 - Selected-weekday weekly-to-daily scheduling
-- Local JSON persistence for task completion and streak data
+- Numbered acceptance-criteria checklists and explicit completion criteria
+- Click-anywhere task cards with a separate completion control
+- User-created tasks with descriptions and categories
+- Automatic dated backlog for unfinished and missed tasks
+- Local JSON persistence for tasks, backlog, completion, and streak data
 - No API keys or imported PDFs stored in the repository
 
 ## Requirements
@@ -112,4 +117,3 @@ The content inside an imported document is treated as untrusted reference data, 
 - GitHub contribution verification
 - Weekly review and export
 - Edit and reschedule generated tasks
-- Adaptive replanning for missed days

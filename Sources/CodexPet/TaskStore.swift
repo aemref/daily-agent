@@ -5,6 +5,7 @@ import SwiftUI
 final class TaskStore: ObservableObject {
     @Published private(set) var plan: RoadmapDay
     @Published private(set) var tasks: [DailyTask]
+    @Published private(set) var overdueTasks: [DailyTask]
     @Published private(set) var completedDateKeys: Set<String>
     @Published private(set) var activeRoadmap: GeneratedRoadmap?
     @Published private(set) var roadmapStartDate: Date?
@@ -29,6 +30,7 @@ final class TaskStore: ObservableObject {
         let initialPlan = engine.plan(for: today)
         self.plan = initialPlan
         self.tasks = initialPlan.tasks
+        self.overdueTasks = []
         self.completedDateKeys = []
         self.activeRoadmap = nil
         self.roadmapStartDate = nil
@@ -87,6 +89,31 @@ final class TaskStore: ObservableObject {
         save()
     }
 
+    @discardableResult
+    func addTask(title: String, detail: String, category: TaskCategory) -> Bool {
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanDetail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanTitle.isEmpty, !cleanDetail.isEmpty else { return false }
+
+        tasks.append(
+            DailyTask(
+                title: cleanTitle,
+                detail: cleanDetail,
+                category: category,
+                estimatedMinutes: 0,
+                scheduledDateKey: Self.dateKey(for: now())
+            )
+        )
+        synchronizeCompletionState()
+        save()
+        return true
+    }
+
+    func completeOverdue(taskID: UUID) {
+        overdueTasks.removeAll { $0.id == taskID }
+        save()
+    }
+
     func refreshIfNeeded() {
         loadOrGenerate(for: now())
     }
@@ -96,7 +123,8 @@ final class TaskStore: ObservableObject {
         activeRoadmap = roadmap
         roadmapStartDate = Calendar.autoupdatingCurrent.startOfDay(for: today)
         plan = currentPlan(for: today)
-        tasks = plan.tasks
+        tasks = dated(plan.tasks, dateKey: Self.dateKey(for: today))
+        overdueTasks = []
         synchronizeCompletionState()
         save()
     }
@@ -106,6 +134,7 @@ final class TaskStore: ObservableObject {
         roadmapStartDate = nil
         plan = engine.plan(for: now())
         tasks = []
+        overdueTasks = []
         save()
     }
 
@@ -118,6 +147,7 @@ final class TaskStore: ObservableObject {
         else {
             plan = engine.plan(for: date)
             tasks = []
+            overdueTasks = []
             completedDateKeys = []
             save()
             return
@@ -127,9 +157,65 @@ final class TaskStore: ObservableObject {
         activeRoadmap = state.activeRoadmap
         roadmapStartDate = state.roadmapStartDate
         plan = currentPlan(for: date)
-        tasks = state.dateKey == key ? state.tasks : plan.tasks
+        var carried = (state.overdueTasks ?? []).filter { !$0.isCompleted }
+        if state.dateKey == key {
+            tasks = dated(state.tasks, dateKey: key)
+            overdueTasks = deduplicated(carried)
+        } else {
+            carried.append(contentsOf: unfinished(state.tasks, fallbackDateKey: state.dateKey))
+            carried.append(contentsOf: missedTasks(after: state.dateKey, before: date))
+            overdueTasks = deduplicated(carried)
+            tasks = dated(plan.tasks, dateKey: key)
+        }
         synchronizeCompletionState()
         save()
+    }
+
+    private func missedTasks(after dateKey: String, before today: Date) -> [DailyTask] {
+        let calendar = Calendar.autoupdatingCurrent
+        guard var cursor = Self.date(from: dateKey, calendar: calendar) else { return [] }
+        var result: [DailyTask] = []
+        cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? today
+        let endKey = Self.dateKey(for: today)
+
+        while Self.dateKey(for: cursor) < endKey {
+            let key = Self.dateKey(for: cursor)
+            result.append(contentsOf: dated(currentPlan(for: cursor).tasks, dateKey: key))
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return result
+    }
+
+    private func unfinished(_ source: [DailyTask], fallbackDateKey: String) -> [DailyTask] {
+        source.filter { !$0.isCompleted }.map { task in
+            var copy = task
+            copy.scheduledDateKey = copy.scheduledDateKey ?? fallbackDateKey
+            return copy
+        }
+    }
+
+    private func dated(_ source: [DailyTask], dateKey: String) -> [DailyTask] {
+        source.map { task in
+            var copy = task
+            copy.scheduledDateKey = copy.scheduledDateKey ?? dateKey
+            return copy
+        }
+    }
+
+    private func deduplicated(_ source: [DailyTask]) -> [DailyTask] {
+        var seenIDs = Set<UUID>()
+        var seenScheduleEntries = Set<String>()
+        return source.filter { task in
+            let scheduleEntry = [
+                task.scheduledDateKey ?? "",
+                task.category.rawValue,
+                task.title
+            ].joined(separator: "|")
+            return seenIDs.insert(task.id).inserted
+                && seenScheduleEntries.insert(scheduleEntry).inserted
+        }
+            .sorted { ($0.scheduledDateKey ?? "") < ($1.scheduledDateKey ?? "") }
     }
 
     private func currentPlan(for date: Date) -> RoadmapDay {
@@ -167,7 +253,8 @@ final class TaskStore: ObservableObject {
             tasks: tasks,
             completedDateKeys: completedDateKeys.sorted(),
             activeRoadmap: activeRoadmap,
-            roadmapStartDate: roadmapStartDate
+            roadmapStartDate: roadmapStartDate,
+            overdueTasks: overdueTasks
         )
         guard let data = try? encoder.encode(state) else { return }
         do {
@@ -193,5 +280,11 @@ final class TaskStore: ObservableObject {
 
     static func dateKey(for date: Date) -> String {
         date.formatted(.iso8601.year().month().day())
+    }
+
+    private static func date(from key: String, calendar: Calendar) -> Date? {
+        let parts = key.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }
