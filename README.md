@@ -36,6 +36,7 @@ The app does not appear in the Dock. Look for the sparkle icon in the macOS menu
 - Native SwiftUI `MenuBarExtra`
 - Dockless agent app (`LSUIElement`)
 - Optional floating edge panel powered by `NSPanel`
+- Animated pet with idle movement, blinking, and progress reactions
 - Compact pet and expanded daily dashboard
 - PDF import with native PDFKit text extraction
 - Paste-in roadmap or goal text
