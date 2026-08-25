@@ -47,6 +47,7 @@ struct DailyTask: Identifiable, Codable, Equatable, Sendable {
 
 struct RoadmapDay: Equatable, Sendable {
     let dayNumber: Int
+    let totalDays: Int
     let monthNumber: Int
     let milestone: String
     let focus: String
@@ -54,10 +55,57 @@ struct RoadmapDay: Equatable, Sendable {
     let tasks: [DailyTask]
 }
 
+struct GeneratedRoadmap: Codable, Equatable, Sendable {
+    var title: String
+    var summary: String
+    var durationWeeks: Int
+    var daysPerWeek: Int
+    var minutesPerDay: Int
+    var weeks: [GeneratedWeek]
+
+    var taskCount: Int {
+        weeks.reduce(0) { $0 + $1.tasks.count }
+    }
+}
+
+struct GeneratedWeek: Codable, Equatable, Sendable {
+    var weekNumber: Int
+    var milestone: String
+    var theme: String
+    var outcome: String
+    var tasks: [GeneratedTask]
+}
+
+struct GeneratedTask: Codable, Equatable, Sendable {
+    var title: String
+    var detail: String
+    var category: String
+    var estimatedMinutes: Int
+    var acceptanceCriteria: [String]
+}
+
+struct SchedulePreferences: Equatable, Sendable {
+    var durationMonths: Int = 6
+    var daysPerWeek: Int = 5
+    var minutesPerDay: Int = 60
+
+    var durationWeeks: Int {
+        max(4, Int((Double(durationMonths) * 4.345).rounded()))
+    }
+}
+
 struct PersistedState: Codable, Sendable {
     var dateKey: String
     var tasks: [DailyTask]
     var completedDateKeys: [String]
+    var activeRoadmap: GeneratedRoadmap?
+    var roadmapStartDate: Date?
 
-    static let empty = PersistedState(dateKey: "", tasks: [], completedDateKeys: [])
+    static let empty = PersistedState(
+        dateKey: "",
+        tasks: [],
+        completedDateKeys: [],
+        activeRoadmap: nil,
+        roadmapStartDate: nil
+    )
 }

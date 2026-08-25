@@ -33,6 +33,7 @@ struct RoadmapEngine: Sendable {
 
         return RoadmapDay(
             dayNumber: day,
+            totalDays: 365,
             monthNumber: month,
             milestone: "Q\(((month - 1) / 3) + 1)",
             focus: roadmapMonth.focus,

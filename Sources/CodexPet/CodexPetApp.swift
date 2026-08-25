@@ -14,12 +14,16 @@ struct CodexPetApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            DashboardView(
-                store: store,
-                onShowFloating: {
-                    panelController.show()
-                }
-            )
+            if store.hasActiveRoadmap {
+                DashboardView(
+                    store: store,
+                    onShowFloating: {
+                        panelController.show()
+                    }
+                )
+            } else {
+                RoadmapSetupView(store: store)
+            }
         } label: {
             Label(
                 "Codex Pet - \(store.completedCount)/\(store.tasks.count)",

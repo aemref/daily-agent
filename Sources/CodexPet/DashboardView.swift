@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var store: TaskStore
+    @State private var showsResetConfirmation = false
     var isFloating = false
     var onShowFloating: (() -> Void)?
     var onCollapse: (() -> Void)?
@@ -28,14 +29,14 @@ struct DashboardView: View {
                 HStack(spacing: 6) {
                     Text("Codex Pet")
                         .font(.headline)
-                    Text("\(store.plan.milestone) • Ay \(store.plan.monthNumber)")
+                    Text(store.plan.milestone)
                         .font(.caption2.bold())
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(.indigo.opacity(0.12), in: Capsule())
                         .foregroundStyle(.indigo)
                 }
-                Text("Gün \(store.plan.dayNumber)/365 • \(store.plan.focus)")
+                Text("Gün \(store.plan.dayNumber)/\(store.plan.totalDays) • \(store.plan.focus)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -110,6 +111,12 @@ struct DashboardView: View {
                 .buttonStyle(.borderless)
             }
 
+            Button("Yeni plan") {
+                showsResetConfirmation = true
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+
             Button("Çık") {
                 NSApplication.shared.terminate(nil)
             }
@@ -118,6 +125,18 @@ struct DashboardView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+        .confirmationDialog(
+            "Mevcut roadmap değiştirilsin mi?",
+            isPresented: $showsResetConfirmation
+        ) {
+            Button("Yeni roadmap oluştur", role: .destructive) {
+                store.resetRoadmap()
+                onClose?()
+            }
+            Button("Vazgeç", role: .cancel) {}
+        } message: {
+            Text("Mevcut roadmap kaldırılır; geçmiş streak kayıtları korunur.")
+        }
     }
 }
 
